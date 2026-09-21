@@ -1,178 +1,97 @@
-﻿# Waygood Study Abroad Candidate Evaluation Starter
+﻿Waygood Study Abroad Platform - Backend Assignment
 
-This repository is a starter assignment for backend-focused MERN candidates interviewing with Waygood.
+This repository contains the backend implementation for the MERN Stack Backend Developer Intern assignment at Waygood. The platform helps students discover universities, compare programs, plan budgets, track applications, and receive AI-assisted study planning.
 
-Waygood's public website positions the business around helping students discover universities, compare options, plan budgets, and navigate their study-abroad journey with AI-assisted tools and partner networks. This starter mirrors that business context by focusing on student discovery, recommendation, and application tracking.
+🚀 Core Features Implemented
 
-## Business Scenario
+1. Secure Authentication & Authorization:
 
-You are joining the engineering team working on a study-abroad platform for students and counselors.
+Complete user registration (POST /api/auth/register), login (POST /api/auth/login), and protected profile retrieval (GET /api/auth/me). 
+  Stateless authentication implemented using JSON Web Tokens (JWT).   Secure password hashing using bcryptjs with proper salt rounds.   Role-based access control supporting student and counselor roles. 
 
-The product already has:
+2. Advanced University & Program Discovery:Advanced filtering endpoints (GET /api/universities, GET /api/programs) supporting country, intake, degree level, budget, scholarship availability, and text search.  
+ Clean, consistent, and frontend-friendly pagination metadata and sorting options.   
+  
+3. Smart Recommendation Engine:Built using the MongoDB Aggregation Pipeline (GET /api/recommendations/:studentId).  
+ Matches programs based on the student's preferred country, budget, field of interest, intake, and IELTS score preferences, returning top matches along with explanatory match reasons. 
 
-- a basic university and program catalog
-- seeded sample data for students, universities, programs, and applications
-- a minimal React dashboard shell
-- starter backend architecture with Express, Mongoose, controllers, services, and middleware
+4. Robust Application Workflow System:
+  
+Complete application lifecycle management (POST /api/applications, PATCH /api/applications/:id/status).  
+ Prevention of duplicate applications for the same student, program, and intake using unique compound indexes.  
+ Strict validation of status transitions (e.g., Applied → Reviewed → Accepted/Rejected) with automatic timeline/status history tracking. 
 
-The product is still missing critical engineering work needed for a real candidate-ready release.
+5.   Performance, Caching & Indexing:
+ Integrated caching mechanisms using Node-Cache for frequently accessed endpoints (popular universities and dashboard summaries). 
+ Documented and implemented strategic MongoDB indexes to optimize high-traffic queries. 
 
-## Your Assignment
+6.  Bonus: AI-Based Study Planning:
+Added an AI endpoint (GET /api/ai/study-plan) to generate personalized study timelines, preparation milestones, and recommendations for students.   
 
-Build on top of this starter and complete the platform features below.
+🛠️ Tech Stack
+Runtime & Framework: Node.js, Express.js   
+Database & ODM: MongoDB, Mongoose (with Aggregation Framework)  
+Authentication: JSON Web Tokens (JWT), bcryptjs   
+Caching: Node-Cache   
 
-### Required Tasks
+📁 Starter Project Structure
 
-1. Implement secure authentication
-
-- Complete `POST /api/auth/register`
-- Complete `POST /api/auth/login`
-- Add a protected `GET /api/auth/me`
-- Use JWT-based authentication
-- Store passwords securely using hashing
-- Support roles for `student` and `counselor`
-
-2. Complete advanced university and program discovery
-
-- Extend `GET /api/universities` and `GET /api/programs`
-- Add filtering by country, intake, degree level, budget, scholarship availability, and search term
-- Add pagination metadata and sorting options
-- Make the response format consistent and frontend-friendly
-
-3. Build a recommendation engine using MongoDB aggregation
-
-- Improve `GET /api/recommendations/:studentId`
-- Use MongoDB aggregation to recommend relevant programs for a student
-- Consider preferred countries, budget, field of interest, intake, and IELTS score
-- Return top matches with a short explanation of why each result matched
-
-4. Implement the application workflow
-
-- Complete `POST /api/applications`
-- Complete `PATCH /api/applications/:id/status`
-- Prevent duplicate applications for the same student, program, and intake
-- Enforce valid status transitions
-- Record a timeline/history entry when status changes
-
-5. Add caching and performance improvements
-
-- Cache `GET /api/universities/popular` and/or dashboard summary responses
-- You may use Redis or improve the provided in-memory cache
-- Add or document MongoDB indexes that improve the most important queries
-- Keep performance tradeoffs clear in code comments or README notes
-
-6. Add testing and developer documentation
-
-- Add tests for at least 2 important API flows
-- Include at least 1 edge-case test
-- Update this README with any assumptions, setup steps, and architecture notes needed to review your submission
-
-### Bonus Tasks
-
-- Integrate an AI endpoint for study-plan suggestions, SOP helper prompts, or shortlist summaries
-- Dockerize the backend and database setup
-- Improve the React dashboard to consume your new APIs cleanly
-- Add rate limiting, request logging, or role-based access improvements
-
-## What We Will Evaluate
-
-- Backend architecture and code organization
-- API design, validation, and error handling
-- MongoDB query quality, aggregation usage, and indexing awareness
-- Performance thinking, including caching and response design
-- Code readability, maintainability, and naming
-- Testing depth and practical engineering judgment
-- How well your solution reflects a real study-abroad product workflow
-
-## Suggested Timebox
-
-A strong submission can usually be completed in 6-8 focused hours. We care more about thoughtful engineering tradeoffs than feature volume.
-
-## Suggested Submission Expectations
-
-- Keep the solution realistic and production-minded
-- Favor clean, explainable code over unnecessary complexity
-- If you make assumptions, document them
-- If you skip a bonus feature, that is okay
-- Share your repository, setup instructions, and any sample credentials or environment notes needed to review
-
-## Starter Project Structure
-
-```text
 .
 |-- backend
 |   |-- src
-|   |   |-- config
-|   |   |-- controllers
-|   |   |-- data
-|   |   |-- middleware
-|   |   |-- models
-|   |   |-- routes
-|   |   |-- scripts
-|   |   |-- services
-|   |   `-- utils
-|-- frontend
-|   `-- src
-`-- docs
-```
+|   |   |-- config       # Database and environment configurations
+|   |   |-- controllers  # Request handlers (Auth, Programs, Applications, AI)
+|   |   |-- data         # Seed datasets
+|   |   |-- middleware   # Auth protection, error handling, validation
+|   |   |-- models       # Mongoose schemas (Student, Program, Application, University)
+|   |   |-- routes       # API route definitions
+|   |   |-- scripts      # Database seeding scripts
+|   |   |-- services     # Business logic & recommendation algorithms
+|   |   `-- utils        # Async handlers, custom HTTP errors
+|-- frontend             # Minimal React dashboard shell
+`-- docs                 # Assignment brief and reference documents
 
-## Getting Started
+⚙️ Setup & Installation Instructions
 
-### 1. Backend setup
+1. Backend Setup
 
-```bash
 cd backend
 npm install
-copy .env.example .env
+
+2. Environment Configuration
+
+PORT=5000
+MONGO_URI=mongodb://localhost:27017/waygood-assignment
+JWT_SECRET=your_super_secret_jwt_key_here
+
+3. Seed Sample Data
+
 npm run seed
+
+4. Start the Server
+
 npm run dev
-```
 
-### 2. Frontend setup
+5. Frontend Setup (Optional)
 
-```bash
 cd frontend
 npm install
 npm run dev
-```
 
-On macOS or Linux, use `cp .env.example .env` instead of `copy`.
+🏗️ Architecture Decisions & Design Choices
 
-## Environment Variables
+1. Stateless Authentication (JWT & Bcrypt)
 
-See `backend/.env.example`.
+JSON Web Tokens (JWT) are used for stateless authentication so that the server does not need to store session states in memory, ensuring seamless scalability.   bcryptjs is utilized to hash passwords securely with proper salt rounds before storing them in the database.   
 
-## Seeded Data Included
+2. Database Indexing & PerformanceProgram Collection: 
 
-The seed script creates sample:
+Indexes are created on country, fieldOfStudy, and tuitionFee to ensure filtering and sorting queries execute in milliseconds.   Application Collection: A unique compound index ({ student: 1, program: 1, intake: 1 }) is enforced at the database level to strictly block duplicate applications for the same intake.
 
-- students with profile preferences
-- universities across key study-abroad destinations
-- programs with tuition, intake, and IELTS requirements
-- applications with mixed statuses
+3. Recommendation Engine Pipeline
 
-## Sample Seed Credentials
+MongoDB’s native Aggregation Framework ($match, $addFields, $sort) is leveraged to evaluate student profile preferences directly at the database level, calculating match scores efficiently for fast suggestions.
 
-After running the seed script, you can use:
+4. Caching Strategy
 
-- `aarav@example.com` / `Candidate123!`
-- `sara@example.com` / `Candidate123!`
-- `counselor@example.com` / `Candidate123!`
-
-## Notes For Candidates
-
-- Some routes are intentionally incomplete
-- Some services are intentionally simple and should be improved
-- The codebase is structured to show expected engineering direction, not to be finished
-- You can refactor any part of the starter if your approach is better
-
-## Candidate-Friendly Deliverables
-
-Along with this README, a Word assignment brief is available at:
-
-- `docs/Waygood_Candidate_Assignment.docx`
-
-## Reference Context Used For This Assignment Design
-
-- Waygood website: student discovery, AI tools, calculators, and partner-university positioning
-- Job description: backend APIs, MongoDB aggregation, performance optimization, caching, and AI integration
+Node-Cache is integrated into high-traffic routes (such as popular universities and dashboard analytics) to minimize repetitive database reads and significantly improve API response times.

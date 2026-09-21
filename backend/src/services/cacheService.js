@@ -1,35 +1,8 @@
-﻿const env = require("../config/env");
+﻿const NodeCache = require('node-cache');
+const cache = new NodeCache({ stdTTL: 300 });
 
-class MemoryCacheService {
-  constructor() {
-    this.store = new Map();
-  }
+const getCache = (key) => cache.get(key);
+const setCache = (key, value, ttl = 300) => cache.set(key, value, ttl);
+const flushCache = () => cache.flushAll();
 
-  get(key) {
-    const record = this.store.get(key);
-
-    if (!record) {
-      return null;
-    }
-
-    if (record.expiresAt < Date.now()) {
-      this.store.delete(key);
-      return null;
-    }
-
-    return record.value;
-  }
-
-  set(key, value, ttlSeconds = env.cacheTtlSeconds) {
-    this.store.set(key, {
-      value,
-      expiresAt: Date.now() + ttlSeconds * 1000,
-    });
-  }
-
-  delete(key) {
-    this.store.delete(key);
-  }
-}
-
-module.exports = new MemoryCacheService();
+module.exports = { getCache, setCache, flushCache };

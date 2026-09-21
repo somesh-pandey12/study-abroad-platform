@@ -1,48 +1,67 @@
-﻿const Application = require("../models/Application");
-const asyncHandler = require("../utils/asyncHandler");
-const HttpError = require("../utils/httpError");
+﻿const Application = require('../models/Application');
 
-const listApplications = asyncHandler(async (req, res) => {
-  const { studentId, status } = req.query;
-  const filters = {};
+exports.createApplication = async (req, res, next) => {
+  try {
+    const { programId, intake } = req.body;
+    const studentId = req.user.id;
 
-  if (studentId) {
-    filters.student = studentId;
+    const existingApp = await Application.findOne({ student: studentId, program: programId, intake });
+    if (existingApp) {
+      return res.status(400).json({ success: false, message: 'Duplicate application for this program and intake.' });
+    }
+
+    const application = await Application.create({
+      student: studentId,
+      program: programId,
+      intake,
+      status: 'Applied',
+      statusHistory: [{ status: 'Applied', timestamp: new Date() }]
+    });
+
+    res.status(201).json({ success: true, data: application });
+  } catch (error) {
+    next(error);
   }
+};
 
-  if (status) {
-    filters.status = status;
+exports.getApplications = async (req, res, next) => {
+  try {
+    const filter = req.user.role === 'counselor' ? {} : { student: req.user.id };
+    const applications = await Application.find(filter).populate('program').populate('student', '-password');
+    res.status(200).json({ success: true, count: applications.length, data: applications });
+  } catch (error) {
+    next(error);
   }
+};
 
-  const applications = await Application.find(filters)
-    .populate("student", "fullName email role")
-    .populate("program", "title degreeLevel tuitionFeeUsd")
-    .populate("university", "name country city")
-    .sort({ createdAt: -1 })
-    .lean();
+exports.updateApplicationStatus = async (req, res, next) => {
+  try {
+    const { status } = req.body;
+    const validTransitions = {
+      'Applied': ['Reviewed', 'Rejected'],
+      'Reviewed': ['Accepted', 'Rejected'],
+      'Accepted': [],
+      'Rejected': []
+    };
 
-  res.json({
-    success: true,
-    data: applications,
-  });
-});
+    const application = await Application.findById(req.params.id);
+    if (!application) {
+      return res.status(404).json({ success: false, message: 'Application not found' });
+    }
 
-const createApplication = asyncHandler(async (req, res) => {
-  throw new HttpError(
-    501,
-    "Application creation is intentionally incomplete for the assignment."
-  );
-});
+    if (!validTransitions[application.status].includes(status)) {
+      return res.status(400).json({ 
+        success: false, 
+        message: `Invalid status transition from ${application.status} to ${status}` 
+      });
+    }
 
-const updateApplicationStatus = asyncHandler(async (req, res) => {
-  throw new HttpError(
-    501,
-    "Application status transitions are intentionally incomplete for the assignment."
-  );
-});
+    application.status = status;
+    application.statusHistory.push({ status, timestamp: new Date() });
+    await application.save();
 
-module.exports = {
-  createApplication,
-  listApplications,
-  updateApplicationStatus,
+    res.status(200).json({ success: true, data: application });
+  } catch (error) {
+    next(error);
+  }
 };

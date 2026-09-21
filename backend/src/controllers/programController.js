@@ -1,91 +1,42 @@
-﻿const Program = require("../models/Program");
-const asyncHandler = require("../utils/asyncHandler");
+﻿const Program = require('../models/Program');
 
-function parseBoolean(value) {
-  if (value === "true") return true;
-  if (value === "false") return false;
-  return undefined;
-}
+exports.getPrograms = async (req, res, next) => {
+  try {
+    const { country, fieldOfStudy, degreeLevel, intake, scholarship, search, page = 1, limit = 10, sortBy = 'tuitionFee', order = 'asc' } = req.query;
 
-const listPrograms = asyncHandler(async (req, res) => {
-  const {
-    country,
-    degreeLevel,
-    intake,
-    field,
-    q,
-    maxTuition,
-    scholarshipAvailable,
-    sortBy = "relevance",
-    page = 1,
-    limit = 10,
-  } = req.query;
+    let query = {};
+    if (country) query.country = country;
+    if (fieldOfStudy) query.fieldOfStudy = fieldOfStudy;
+    if (degreeLevel) query.degreeLevel = degreeLevel;
+    if (intake) query.intake = intake;
+    if (scholarship) query.scholarshipAvailable = scholarship === 'true';
+    if (search) {
+      query.$or = [
+        { universityName: { $regex: search, $options: 'i' } },
+        { programName: { $regex: search, $options: 'i' } },
+        { fieldOfStudy: { $regex: search, $options: 'i' } }
+      ];
+    }
 
-  const filters = {};
+    const sortOrder = order === 'desc' ? -1 : 1;
+    const sortCriteria = { [sortBy]: sortOrder };
 
-  if (country) {
-    filters.country = country;
-  }
+    const programs = await Program.find(query)
+      .sort(sortCriteria)
+      .limit(Number(limit))
+      .skip((Number(page) - 1) * Number(limit));
 
-  if (degreeLevel) {
-    filters.degreeLevel = degreeLevel;
-  }
+    const total = await Program.countDocuments(query);
 
-  if (field) {
-    filters.field = field;
-  }
-
-  if (intake) {
-    filters.intakes = intake;
-  }
-
-  if (maxTuition) {
-    filters.tuitionFeeUsd = { $lte: Number(maxTuition) };
-  }
-
-  const scholarshipFlag = parseBoolean(scholarshipAvailable);
-  if (typeof scholarshipFlag === "boolean") {
-    filters.scholarshipAvailable = scholarshipFlag;
-  }
-
-  if (q) {
-    filters.$or = [
-      { title: { $regex: q, $options: "i" } },
-      { universityName: { $regex: q, $options: "i" } },
-      { field: { $regex: q, $options: "i" } },
-    ];
-  }
-
-  const pageNumber = Math.max(Number(page), 1);
-  const pageSize = Math.min(Math.max(Number(limit), 1), 50);
-
-  const sortMap = {
-    tuitionAsc: { tuitionFeeUsd: 1 },
-    tuitionDesc: { tuitionFeeUsd: -1 },
-    relevance: { scholarshipAvailable: -1, tuitionFeeUsd: 1 },
-  };
-
-  const [items, total] = await Promise.all([
-    Program.find(filters)
-      .sort(sortMap[sortBy] || sortMap.relevance)
-      .skip((pageNumber - 1) * pageSize)
-      .limit(pageSize)
-      .lean(),
-    Program.countDocuments(filters),
-  ]);
-
-  res.json({
-    success: true,
-    data: items,
-    meta: {
-      page: pageNumber,
-      limit: pageSize,
+    res.status(200).json({
+      success: true,
+      count: programs.length,
       total,
-      totalPages: Math.ceil(total / pageSize),
-    },
-  });
-});
-
-module.exports = {
-  listPrograms,
+      totalPages: Math.ceil(total / limit),
+      currentPage: Number(page),
+      data: programs
+    });
+  } catch (error) {
+    next(error);
+  }
 };

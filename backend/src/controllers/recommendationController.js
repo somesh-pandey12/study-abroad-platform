@@ -1,16 +1,23 @@
-﻿const asyncHandler = require("../utils/asyncHandler");
-const { buildProgramRecommendations } = require("../services/recommendationService");
+﻿const Student = require('../models/Student');
+const { getRecommendationsForStudent } = require('../services/recommendationService');
 
-const getRecommendations = asyncHandler(async (req, res) => {
-  const { studentId } = req.params;
-  const payload = await buildProgramRecommendations(studentId);
+exports.getRecommendations = async (req, res, next) => {
+  try {
+    const studentId = req.params.studentId || req.user.id;
+    const student = await Student.findById(studentId);
 
-  res.json({
-    success: true,
-    ...payload,
-  });
-});
+    if (!student) {
+      return res.status(404).json({ success: false, message: 'Student not found' });
+    }
 
-module.exports = {
-  getRecommendations,
+    const recommendations = await getRecommendationsForStudent(student);
+
+    res.status(200).json({
+      success: true,
+      count: recommendations.length,
+      data: recommendations
+    });
+  } catch (error) {
+    next(error);
+  }
 };
