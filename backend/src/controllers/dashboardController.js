@@ -1,20 +1,29 @@
 ﻿const Application = require('../models/Application');
 const Program = require('../models/Program');
 
-exports.getDashboardStats = async (req, res, next) => {
+const getDashboardData = async (req, res, next) => {
   try {
-    const totalPrograms = await Program.countDocuments();
-    const totalApplications = await Application.countDocuments(req.user.role === 'counselor' ? {} : { student: req.user.id });
+    const studentId = req.user ? req.user.id : null;
+    
+    // Summary statistics
+    const totalApplications = studentId ? await Application.countDocuments({ student: studentId }) : await Application.countDocuments({});
+    const acceptedApplications = studentId ? await Application.countDocuments({ student: studentId, status: 'Accepted' }) : 0;
+    const totalPrograms = await Program.countDocuments({});
 
     res.status(200).json({
       success: true,
       data: {
-        totalPrograms,
         totalApplications,
-        role: req.user.role
+        acceptedApplications,
+        totalPrograms,
+        message: "Dashboard summary data retrieved successfully"
       }
     });
   } catch (error) {
     next(error);
   }
+};
+
+module.exports = {
+  getDashboardData
 };

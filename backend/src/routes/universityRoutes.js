@@ -1,13 +1,15 @@
-﻿const express = require("express");
-
-const {
-  listPopularUniversities,
-  listUniversities,
-} = require("../controllers/universityController");
-
+﻿const express = require('express');
 const router = express.Router();
+const { getUniversities, getUniversityById } = require('../controllers/universityController');
 
-router.get("/", listUniversities);
-router.get("/popular", listPopularUniversities);
+const safeHandler = (fn, name) => {
+  if (!fn) {
+    return (req, res) => res.status(500).json({ success: false, error: `Controller method ${name} is not defined` });
+  }
+  return fn;
+};
+
+router.get('/', safeHandler(getUniversities, 'getUniversities'));
+router.get('/:id', safeHandler(getUniversityById, 'getUniversityById'));
 
 module.exports = router;

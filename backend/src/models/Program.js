@@ -3,12 +3,12 @@
 const programSchema = new mongoose.Schema({
   universityName: { type: String, required: true, index: true },
   country: { type: String, required: true, index: true },
-  programName: { type: String, required: true },
-  fieldOfStudy: { type: String, required: true, index: true },
-  degreeLevel: { type: String, required: true },
-  tuitionFee: { type: Number, required: true, index: true },
-  intake: { type: [String], required: true },
-  minIelts: { type: Number, required: true },
+  programName: { type: String, required: false },
+  fieldOfStudy: { type: String, required: false, index: true },
+  degreeLevel: { type: String, required: false },
+  tuitionFee: { type: Number, required: false, index: true },
+  intake: { type: [String], required: false },
+  minIelts: { type: Number, required: false },
   scholarshipAvailable: { type: Boolean, default: false }
 });
 

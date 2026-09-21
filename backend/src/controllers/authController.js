@@ -1,74 +1,108 @@
-﻿const Student = require('../models/Student');
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
+﻿const jwt = require("jsonwebtoken");
 
-const generateToken = (id, role) => {
-  return jwt.sign({ id, role }, process.env.JWT_SECRET || 'secret', { expiresIn: '30d' });
-};
+const env = require("../config/env");
+const Student = require("../models/Student");
+const asyncHandler = require("../utils/asyncHandler");
+const HttpError = require("../utils/httpError");
 
-exports.register = async (req, res, next) => {
-  try {
-    const { name, email, password, role, preferences } = req.body;
-    const existingUser = await Student.findOne({ email });
-    if (existingUser) {
-      return res.status(400).json({ success: false, message: 'User already exists' });
-    }
+function signToken(student) {
+  return jwt.sign({ sub: student._id.toString() }, env.jwtSecret, {
+    expiresIn: env.jwtExpiresIn,
+  });
+}
 
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
+function sanitizeStudent(student) {
+  const plain = typeof student.toObject === "function" ? student.toObject() : { ...student };
+  delete plain.password;
+  return plain;
+}
 
-    const user = await Student.create({
-      name,
-      email,
-      password: hashedPassword,
-      role: role || 'student',
-      preferences: preferences || {}
-    });
+const register = asyncHandler(async (req, res) => {
+  const {
+    fullName,
+    email,
+    password,
+    targetCountries,
+    interestedFields,
+    preferredIntake,
+    maxBudgetUsd,
+    englishTest,
+  } = req.body;
 
-    res.status(201).json({
-      success: true,
-      data: {
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        token: generateToken(user._id, user.role)
-      }
-    });
-  } catch (error) {
-    next(error);
+  if (!fullName || !email || !password) {
+    throw new HttpError(400, "fullName, email and password are required.");
   }
-};
 
-exports.login = async (req, res, next) => {
-  try {
-    const { email, password } = req.body;
-    const user = await Student.findOne({ email });
-
-    if (user && (await bcrypt.compare(password, user.password))) {
-      res.status(200).json({
-        success: true,
-        data: {
-          _id: user._id,
-          name: user.name,
-          email: user.email,
-          role: user.role,
-          token: generateToken(user._id, user.role)
-        }
-      });
-    } else {
-      res.status(401).json({ success: false, message: 'Invalid email or password' });
-    }
-  } catch (error) {
-    next(error);
+  if (password.length < 8) {
+    throw new HttpError(400, "Password must be at least 8 characters long.");
   }
-};
 
-exports.getProfile = async (req, res, next) => {
-  try {
-    const user = await Student.findById(req.user.id).select('-password');
-    res.status(200).json({ success: true, data: user });
-  } catch (error) {
-    next(error);
+  const existingStudent = await Student.findOne({ email: email.toLowerCase().trim() });
+  if (existingStudent) {
+    throw new HttpError(409, "An account with this email already exists.");
   }
+
+  const student = await Student.create({
+    fullName,
+    email,
+    password,
+    targetCountries,
+    interestedFields,
+    preferredIntake,
+    maxBudgetUsd,
+    englishTest,
+  });
+
+  const token = signToken(student);
+
+  res.status(201).json({
+    success: true,
+    data: {
+      student: sanitizeStudent(student),
+      token,
+    },
+  });
+});
+
+const login = asyncHandler(async (req, res) => {
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+    throw new HttpError(400, "Email and password are required.");
+  }
+
+  const student = await Student.findOne({ email: email.toLowerCase().trim() });
+  if (!student) {
+    throw new HttpError(401, "Invalid email or password.");
+  }
+
+  const isPasswordValid = await student.comparePassword(password);
+  if (!isPasswordValid) {
+    throw new HttpError(401, "Invalid email or password.");
+  }
+
+  const token = signToken(student);
+
+  res.json({
+    success: true,
+    data: {
+      student: sanitizeStudent(student),
+      token,
+    },
+  });
+});
+
+const me = asyncHandler(async (req, res) => {
+  res.json({
+    success: true,
+    data: {
+      student: req.user,
+    },
+  });
+});
+
+module.exports = {
+  register,
+  login,
+  me,
 };

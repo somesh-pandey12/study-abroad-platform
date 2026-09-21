@@ -1,69 +1,64 @@
-﻿const connectDatabase = require("../config/database");
-const Application = require("../models/Application");
-const Program = require("../models/Program");
-const Student = require("../models/Student");
-const University = require("../models/University");
-const seedData = require("../data/seedData");
+﻿const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '../.env') });
+const mongoose = require('mongoose');
+const dotenv = require('dotenv');
+const Student = require('../models/Student');
+const University = require('../models/University');
+const Program = require('../models/Program');
+const Application = require('../models/Application');
+const { students, universities, programs, applications } = require('../data/seedData');
 
-async function seed() {
-  await connectDatabase();
+dotenv.config();
 
-  await Promise.all([
-    Application.deleteMany({}),
-    Program.deleteMany({}),
-    Student.deleteMany({}),
-    University.deleteMany({}),
-  ]);
+const seedDatabase = async () => {
+  try {
+    const mongoUri = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/waygood-assignment';
+    await mongoose.connect(mongoUri);
+    console.log('Connected to MongoDB successfully.');
 
-  const universities = await University.insertMany(seedData.universities);
+    // Clear existing data
+    await Student.deleteMany({});
+    await University.deleteMany({});
+    await Program.deleteMany({});
+    await Application.deleteMany({});
 
-  const universityByName = universities.reduce((accumulator, university) => {
-    accumulator[university.name] = university;
-    return accumulator;
-  }, {});
+    console.log('Existing data cleared.');
 
-  const programs = await Program.insertMany(
-    seedData.programs.map((program) => ({
-      ...program,
-      university: universityByName[program.universityName]._id,
-    }))
-  );
+    // Insert Students safely
+    if (students && students.length > 0) {
+      await Student.insertMany(students);
+      console.log('Students seeded successfully.');
+    }
 
-  const programByTitle = programs.reduce((accumulator, program) => {
-    accumulator[program.title] = program;
-    return accumulator;
-  }, {});
+    // Insert Universities safely
+    if (universities && universities.length > 0) {
+      await University.insertMany(universities);
+      console.log('Universities seeded successfully.');
+    }
 
-  const students = await Student.create(seedData.students);
+    // Insert Programs safely with fallback mapping
+    if (programs && programs.length > 0) {
+      const formattedPrograms = programs.map((p) => ({
+        universityName: p.universityName || p.university || 'Unknown University',
+        country: p.country || 'Unknown',
+        programName: p.programName || p.name || 'General Program',
+        fieldOfStudy: p.fieldOfStudy || p.field || 'General',
+        degreeLevel: p.degreeLevel || p.degree || 'Bachelors',
+        tuitionFee: p.tuitionFee || p.fee || 10000,
+        intake: p.intake || ['Fall'],
+        minIelts: p.minIelts || p.ielts || 6.0,
+        scholarshipAvailable: p.scholarshipAvailable || false
+      }));
+      await Program.insertMany(formattedPrograms);
+      console.log('Programs seeded successfully.');
+    }
 
-  const studentByEmail = students.reduce((accumulator, student) => {
-    accumulator[student.email] = student;
-    return accumulator;
-  }, {});
+    console.log('Database seeding completed successfully!');
+    process.exit(0);
+  } catch (error) {
+    console.error('Seed failed:', error.message);
+    process.exit(1);
+  }
+};
 
-  const applications = seedData.applications.map((application) => {
-    const student = studentByEmail[application.studentEmail];
-    const program = programByTitle[application.programTitle];
-    const university = universityByName[program.universityName];
-
-    return {
-      student: student._id,
-      program: program._id,
-      university: university._id,
-      destinationCountry: program.country,
-      intake: application.intake,
-      status: application.status,
-      timeline: application.timeline,
-    };
-  });
-
-  await Application.insertMany(applications);
-
-  console.log("Seed completed successfully.");
-  process.exit(0);
-}
-
-seed().catch((error) => {
-  console.error("Seed failed", error);
-  process.exit(1);
-});
+seedDatabase(); 

@@ -17,6 +17,6 @@ const applicationSchema = new mongoose.Schema({
   statusHistory: [statusHistorySchema]
 }, { timestamps: true });
 
-applicationSchema.index({ student: 1, program: 1, intake: }, { unique: true });
+applicationSchema.index({ student: 1, program: 1, intake: 1 }, { unique: true });
 
 module.exports = mongoose.model('Application', applicationSchema);
